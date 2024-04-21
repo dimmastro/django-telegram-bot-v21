@@ -6,7 +6,7 @@ from telegram import Update
 
 from dtb.celery import app
 from dtb.settings import DEBUG
-from tgbot.dispatcher import dispatcher
+# from tgbot.dispatcher import dispatcher
 from tgbot.main import bot
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @app.task(ignore_result=True)
 def process_telegram_event(update_json):
     update = Update.de_json(update_json, bot)
-    dispatcher.process_update(update)
+    # dispatcher.process_update(update)
 
 
 def index(request):

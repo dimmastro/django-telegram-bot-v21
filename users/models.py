@@ -10,6 +10,7 @@ from telegram.ext import CallbackContext
 from tgbot.handlers.utils.info import extract_user_data_from_update
 from utils.models import CreateUpdateTracker, nb, CreateTracker, GetOrNoneManager
 
+from asgiref.sync import sync_to_async
 
 class AdminUserManager(Manager):
     def get_queryset(self):
@@ -35,10 +36,14 @@ class User(CreateUpdateTracker):
         return f'@{self.username}' if self.username is not None else f'{self.user_id}'
 
     @classmethod
-    def get_user_and_created(cls, update: Update, context: CallbackContext) -> Tuple[User, bool]:
+    async def get_user_and_created(cls, update: Update, context: CallbackContext) -> Tuple[User, bool]:
         """ python-telegram-bot's Update, Context --> User instance """
         data = extract_user_data_from_update(update)
-        u, created = cls.objects.update_or_create(user_id=data["user_id"], defaults=data)
+
+        # Wrap the database operation in sync_to_async
+        u, created = await sync_to_async(cls.objects.update_or_create)(
+            user_id=data["user_id"], defaults=data
+        )
 
         if created:
             # Save deep_link to User model
@@ -51,8 +56,8 @@ class User(CreateUpdateTracker):
         return u, created
 
     @classmethod
-    def get_user(cls, update: Update, context: CallbackContext) -> User:
-        u, _ = cls.get_user_and_created(update, context)
+    async def get_user(cls, update: Update, context: CallbackContext) -> User:
+        u, _ = await cls.get_user_and_created(update, context)
         return u
 
     @classmethod

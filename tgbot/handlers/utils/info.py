@@ -3,16 +3,30 @@ from typing import Dict
 from telegram import Update
 
 
-def extract_user_data_from_update(update: Update) -> Dict:
-    """ python-telegram-bot's Update instance --> User info """
-    user = update.effective_user.to_dict()
+from typing import Dict
+from telegram import Update
 
-    return dict(
-        user_id=user["id"],
-        is_blocked_bot=False,
-        **{
-            k: user[k]
-            for k in ["username", "first_name", "last_name", "language_code"]
-            if k in user and user[k] is not None
-        },
-    )
+def extract_user_data_from_update(update: Update) -> Dict:
+    """Extracts user data from a telegram Update."""
+    user_data = {
+        "user_id": None,
+        "is_blocked_bot": False,
+        "username": None,
+        "first_name": None,
+        "last_name": None,
+        "language_code": None,
+    }
+
+    if update.effective_user:
+        user = update.effective_user.to_dict()
+        user_data.update(
+            {
+                "user_id": user.get("id"),
+                "username": user.get("username"),
+                "first_name": user.get("first_name"),
+                "last_name": user.get("last_name"),
+                "language_code": user.get("language_code"),
+            }
+        )
+
+    return user_data

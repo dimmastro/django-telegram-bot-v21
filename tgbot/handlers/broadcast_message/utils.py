@@ -1,13 +1,15 @@
 from typing import Union, Optional, Dict, List
 
 import telegram
+from asgiref.sync import sync_to_async
 from telegram import MessageEntity, InlineKeyboardButton, InlineKeyboardMarkup
 
 from dtb.settings import TELEGRAM_TOKEN
 from users.models import User
 
+from telegram.constants import ParseMode
 
-def from_celery_markup_to_markup(celery_markup: Optional[List[List[Dict]]]) -> Optional[InlineKeyboardMarkup]:
+async def from_celery_markup_to_markup(celery_markup: Optional[List[List[Dict]]]) -> Optional[InlineKeyboardMarkup]:
     markup = None
     if celery_markup:
         markup = []
@@ -26,7 +28,7 @@ def from_celery_markup_to_markup(celery_markup: Optional[List[List[Dict]]]) -> O
     return markup
 
 
-def from_celery_entities_to_entities(celery_entities: Optional[List[Dict]] = None) -> Optional[List[MessageEntity]]:
+async def from_celery_entities_to_entities(celery_entities: Optional[List[Dict]] = None) -> Optional[List[MessageEntity]]:
     entities = None
     if celery_entities:
         entities = [
@@ -42,10 +44,10 @@ def from_celery_entities_to_entities(celery_entities: Optional[List[Dict]] = Non
     return entities
 
 
-def send_one_message(
+async def send_one_message(
     user_id: Union[str, int],
     text: str,
-    parse_mode: Optional[str] = telegram.ParseMode.HTML,
+    parse_mode: Optional[str] = ParseMode.HTML,
     reply_markup: Optional[List[List[Dict]]] = None,
     reply_to_message_id: Optional[int] = None,
     disable_web_page_preview: Optional[bool] = None,
@@ -54,7 +56,7 @@ def send_one_message(
 ) -> bool:
     bot = telegram.Bot(tg_token)
     try:
-        m = bot.send_message(
+        m = await bot.send_message(
             chat_id=user_id,
             text=text,
             parse_mode=parse_mode,
@@ -65,9 +67,11 @@ def send_one_message(
         )
     except telegram.error.Unauthorized:
         print(f"Can't send message to {user_id}. Reason: Bot was stopped.")
-        User.objects.filter(user_id=user_id).update(is_blocked_bot=True)
+        await User.objects.filter(user_id=user_id).update(is_blocked_bot=True)
         success = False
     else:
         success = True
-        User.objects.filter(user_id=user_id).update(is_blocked_bot=False)
+        # await User.objects.filter(user_id=user_id).update(is_blocked_bot=False)
+        user_filter = await sync_to_async(User.objects.filter)(user_id=user_id)
+        await sync_to_async(user_filter.update)(is_blocked_bot=False)
     return success
